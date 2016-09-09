@@ -21,6 +21,8 @@
 
 #include "evp_store_single_threaded_test.h"
 
+#include <gmock/gmock.h>
+
 static std::map<std::string, std::string> vals;
 
 static void add_stats(const char *key, const uint16_t klen,
@@ -52,37 +54,16 @@ protected:
 };
 
 TEST_F(StatTest, vbucket_seqno_stats_test) {
+    using namespace testing;
     const std::string vbucket = "vb_" + std::to_string(vbid);
+    get_stat(nullptr, "vbucket-seqno");
 
-    // Map of known stats -> is value expected to be zero
-     std::map<std::string, bool> stats = {
-         {vbucket + ":high_seqno", true},
-         {vbucket + ":abs_high_seqno", true},
-         {vbucket + ":last_persisted_seqno", true},
-         {vbucket + ":uuid", false},
-         {vbucket + ":purge_seqno", true},
-         {vbucket + ":last_persisted_snap_start", true},
-         {vbucket + ":last_persisted_snap_end", true}
-     };
-
-     get_stat(nullptr, "vbucket-seqno");
-
-     // Check to see if we can find all the from SeqnoVbStats
-     for (const auto& stat : stats) {
-          auto it = vals.find(stat.first);
-          EXPECT_NE(vals.end(), it);
-      };
-
-     // Check that SeqnoVbStats does not contain any unknown stats
-     // Check that all stat values are zero, except for the uuid
-     for (const auto& kv : vals)  {
-          auto it = stats.find(kv.first);
-          EXPECT_NE(stats.end(), it) << "'" + kv.first + "' is an unknown stat";
-          // Check values are all zero except for uuid
-          if (it->second) {
-              long int value = std::stol(kv.second);
-              EXPECT_EQ(0, value) << "Stat '" + kv.first + "' has the value " <<
-                      value << "and not zero as expected";
-          }
-      };
+    EXPECT_THAT(vals, UnorderedElementsAre(
+                        Key(vbucket + ":uuid"),
+                        Pair(vbucket + ":high_seqno", "0"),
+                        Pair(vbucket + ":abs_high_seqno", "0"),
+                        Pair(vbucket + ":last_persisted_seqno", "0"),
+                        Pair(vbucket + ":purge_seqno", "0"),
+                        Pair(vbucket + ":last_persisted_snap_start", "0"),
+                        Pair(vbucket + ":last_persisted_snap_end", "0")));
 }
